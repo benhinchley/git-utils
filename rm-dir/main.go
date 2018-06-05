@@ -1,3 +1,4 @@
+// Command rm-dir removes directories from a git repository's history
 package main
 
 import (
