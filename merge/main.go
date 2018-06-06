@@ -118,6 +118,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Printf("merging repositories into %q", monorepoName)
 	if err := mergeRepos(repo, wd, mergeWork); err != nil {
 		fmt.Printf("could not merge repositories together: %v\n", err)
 		os.Exit(1)

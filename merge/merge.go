@@ -43,6 +43,12 @@ func mergeRepos(repo *git.Repository, wd string, work []*mergeItem) error {
 			return fmt.Errorf("could not merge %q tags into %q: %v", item.Name, monorepoName, err)
 		}
 
+		cmd = exec.Command("git", "remote", "rm", item.Name)
+		cmd.Dir = filepath.Join(wd, monorepoName)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("could not remove remote %q: %v", item.Name, err)
+		}
+
 		if err := os.RemoveAll(item.Remote); err != nil {
 			return fmt.Errorf("could not remove %q: %v", item.Remote, err)
 		}
