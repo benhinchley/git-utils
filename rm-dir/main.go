@@ -25,6 +25,7 @@ func main() {
 	}
 
 	for _, dir := range dirs {
+		dir = strings.TrimSpace(dir)
 		args := []string{"filter-branch", "-f", "--index-filter", fmt.Sprintf("\"git rm --cached --ignore-unmatch -r %s\"", dir), "--prune-empty"}
 		cmd := exec.Command("git", args...)
 
