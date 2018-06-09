@@ -17,16 +17,45 @@ func moveWorker(wd string, work []string) (*mergeItem, error) {
 	if len(work) > 2 {
 		folder = work[2]
 	}
+	repoPath := filepath.Join(wd, folder)
 
 	fmt.Printf("rewriting history for %q\n", name)
 
+	if err := cloneRepo(name, folder, remote); err != nil {
+		return nil, err
+	}
+
+	branches, err := listBranches(remote, repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, branch := range branches {
+		if err := checkoutBranch(branch, repoPath); err != nil {
+			return nil, err
+		}
+
+		if err := rewriteHistory(name, folder, repoPath); err != nil {
+			return nil, err
+		}
+	}
+
+	abs, _ := filepath.Abs(filepath.Join(wd, folder))
+	return &mergeItem{
+		Remote:   abs,
+		Name:     name,
+		Branches: branches,
+	}, nil
+}
+
+func cloneRepo(name, folder, remote string) error {
 	if err := os.Mkdir(folder, 0777); err != nil {
-		return nil, fmt.Errorf("could not create tmp dir to clone %q into: %v", name, err)
+		return fmt.Errorf("could not create tmp dir to clone %q into: %v", name, err)
 	}
 
 	auth, err := createSSHKeyAuth()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = git.PlainClone(folder, false, &git.CloneOptions{
@@ -34,33 +63,59 @@ func moveWorker(wd string, work []string) (*mergeItem, error) {
 		Auth: auth,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not clone %q: %v", remote, err)
-	}
-	cmd := exec.Command("git", "fetch")
-	cmd.Dir = filepath.Join(wd, folder)
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("could not fetch %q: %v", name, err)
+		return fmt.Errorf("could not clone %q: %v", remote, err)
 	}
 
+	return nil
+}
+
+func listBranches(remote, path string) ([]string, error) {
+	cmd := exec.Command("git", "branch", "-r")
+	cmd.Dir = path
+	buf, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed running \"git branch -r\"")
+	}
+
+	branches := make([]string, 0, 5)
+	for _, branch := range strings.Split(string(buf), "\n") {
+		branch = strings.TrimSpace(branch)
+		branch = strings.Replace(branch, "origin/", "", -1)
+		if strings.HasPrefix(branch, "HEAD") || branch == "" {
+			continue
+		}
+		branches = append(branches, branch)
+	}
+
+	return branches, nil
+}
+
+func checkoutBranch(branch, path string) error {
+	cmd := exec.Command("git", "checkout", branch)
+	cmd.Dir = path
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run \"git checkout %s\"", branch)
+	}
+	return nil
+}
+
+func rewriteHistory(name, folder, path string) error {
 	s, err := createMoveScript(folder)
 	if err != nil {
-		return nil, fmt.Errorf("could not write move script: %v", err)
+		return fmt.Errorf("could not write move script: %v", err)
 	}
 
-	cmd = exec.Command("bash", s)
-	cmd.Dir = filepath.Join(wd, folder)
+	cmd := exec.Command("bash", s)
+	cmd.Dir = path
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("could not rewrite history for %q: %v", name, err)
-	}
-	if err := os.Remove(s); err != nil {
-		return nil, fmt.Errorf("could not remove %q: %v", s, err)
+		return fmt.Errorf("could not rewrite history for %q: %v", name, err)
 	}
 
-	abs, _ := filepath.Abs(filepath.Join(wd, folder))
-	return &mergeItem{
-		Remote: abs,
-		Name:   name,
-	}, nil
+	if err := os.Remove(s); err != nil {
+		return fmt.Errorf("could not remove %q: %v", s, err)
+	}
+
+	return nil
 }
 
 const moveFilterScript = `
@@ -69,7 +124,7 @@ git filter-branch -f --index-filter 'git ls-files -s | sed "s-	\"*-&%s/-" | GIT_
 `
 
 func createMoveScript(dir string) (string, error) {
-	f, err := ioutil.TempFile("", dir)
+	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		return "", err
 	}
