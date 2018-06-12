@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	git "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
+	g "github.com/benhinchley/git-utils/internal/git"
 )
 
 func moveWorker(wd string, work []string) (*mergeItem, error) {
@@ -21,17 +20,17 @@ func moveWorker(wd string, work []string) (*mergeItem, error) {
 
 	fmt.Printf("rewriting history for %q\n", name)
 
-	if err := cloneRepo(name, folder, remote); err != nil {
+	if err := g.CloneRepo(name, folder, remote); err != nil {
 		return nil, err
 	}
 
-	branches, err := listBranches(remote, repoPath)
+	branches, err := g.ListBranches(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, branch := range branches {
-		if err := checkoutBranch(branch, repoPath); err != nil {
+		if err := g.CheckoutBranch(branch, repoPath); err != nil {
 			return nil, err
 		}
 
@@ -46,57 +45,6 @@ func moveWorker(wd string, work []string) (*mergeItem, error) {
 		Name:     name,
 		Branches: branches,
 	}, nil
-}
-
-func cloneRepo(name, folder, remote string) error {
-	if err := os.Mkdir(folder, 0777); err != nil {
-		return fmt.Errorf("could not create tmp dir to clone %q into: %v", name, err)
-	}
-
-	auth, err := createSSHKeyAuth()
-	if err != nil {
-		return err
-	}
-
-	_, err = git.PlainClone(folder, false, &git.CloneOptions{
-		URL:  remote,
-		Auth: auth,
-	})
-	if err != nil {
-		return fmt.Errorf("could not clone %q: %v", remote, err)
-	}
-
-	return nil
-}
-
-func listBranches(remote, path string) ([]string, error) {
-	cmd := exec.Command("git", "branch", "-r")
-	cmd.Dir = path
-	buf, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed running \"git branch -r\"")
-	}
-
-	branches := make([]string, 0, 5)
-	for _, branch := range strings.Split(string(buf), "\n") {
-		branch = strings.TrimSpace(branch)
-		branch = strings.Replace(branch, "origin/", "", -1)
-		if strings.HasPrefix(branch, "HEAD") || branch == "" {
-			continue
-		}
-		branches = append(branches, branch)
-	}
-
-	return branches, nil
-}
-
-func checkoutBranch(branch, path string) error {
-	cmd := exec.Command("git", "checkout", branch)
-	cmd.Dir = path
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run \"git checkout %s\"", branch)
-	}
-	return nil
 }
 
 func rewriteHistory(name, folder, path string) error {
@@ -139,13 +87,4 @@ func createMoveScript(dir string) (string, error) {
 	}
 
 	return f.Name(), nil
-}
-
-func createSSHKeyAuth() (*ssh.PublicKeys, error) {
-	s := fmt.Sprintf("%s/.ssh/id_rsa", os.Getenv("HOME"))
-	keys, err := ssh.NewPublicKeysFromFile("git", s, "")
-	if err != nil {
-		return nil, err
-	}
-	return keys, nil
 }

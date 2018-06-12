@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	g "github.com/benhinchley/git-utils/internal/git"
+
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 )
@@ -29,7 +31,7 @@ func mergeRepos(repo *git.Repository, wd string, work []*mergeItem) error {
 		}
 
 		for _, branch := range item.Branches {
-			if err := checkoutBranch(branch, monorepoPath); err != nil {
+			if err := g.CheckoutBranch(branch, monorepoPath); err != nil {
 				if err := createBranch(branch, monorepoPath); err != nil {
 					return err
 				}
@@ -61,7 +63,7 @@ func mergeRepos(repo *git.Repository, wd string, work []*mergeItem) error {
 		}
 	}
 
-	return checkoutBranch("master", monorepoPath)
+	return g.CheckoutBranch("master", monorepoPath)
 }
 
 func createBranch(branch, path string) error {

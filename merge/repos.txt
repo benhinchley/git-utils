@@ -1,0 +1,14 @@
+git@github.com:sajari/analysis.git analysis
+git@github.com:sajari/api.git api
+git@github.com:sajari/autocomplete.git autocomplete
+git@github.com:sajari/bayes.git bayes
+git@github.com:sajari/crawl.git crawl
+git@github.com:sajari/fuzzy2.git fuzzy2
+git@github.com:sajari/fuzzy3.git fuzzy3
+git@github.com:sajari/geo.git geo
+git@github.com:sajari/proto-internal.git proto-internal
+git@github.com:sajari/sajari-sdk-go-internal.git sdk-internal
+git@github.com:sajari/synonym.git synonym
+git@github.com:sajari/telem.git telem
+git@github.com:sajari/vectorize.git vectorize
+/Users/benhinchley/Workspace/src/github.com/benhinchley/git-utils/merger/sajari.com sajari.com
