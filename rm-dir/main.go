@@ -35,7 +35,7 @@ func main() {
 
 	for _, dir := range dirs {
 		dir = strings.TrimSpace(dir)
-		branches, err := git.ListBranches(wd)
+		branches, err := git.ListRemoteBranches(wd)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

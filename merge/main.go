@@ -5,12 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 
-	git "gopkg.in/src-d/go-git.v4"
+	g "github.com/benhinchley/git-utils/internal/git"
 )
 
 var (
@@ -19,7 +17,7 @@ var (
 )
 
 func main() {
-	flag.StringVar(&monorepoName, "name", "monorepo", "name of the monorepo to be created")
+	flag.StringVar(&monorepoName, "name", "go", "name of the monorepo to be created")
 	flag.StringVar(&inputFile, "input", "", "file containing repos to be merged")
 	flag.Parse()
 
@@ -101,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo, err := initRepo(monorepoName, wd)
+	repo, err := g.CreateRepo(monorepoName, wd)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -120,22 +118,4 @@ type mergeItem struct {
 	// Name is the name of the remote
 	Name     string
 	Branches []string
-}
-
-func initRepo(name, wd string) (*git.Repository, error) {
-	if err := os.Mkdir(name, 0777); err != nil {
-		return nil, fmt.Errorf("could not mkdir %q: %v", name, err)
-	}
-	repo, err := git.PlainInit(name, false)
-	if err != nil {
-		return nil, fmt.Errorf("could not init repo %q: %v", name, err)
-	}
-
-	cmd := exec.Command("git", "commit", "-m", fmt.Sprintf("Root commit for %s", name), "--allow-empty")
-	cmd.Dir = filepath.Join(wd, name)
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("could not create inital commit: %v", err)
-	}
-
-	return repo, nil
 }

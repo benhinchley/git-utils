@@ -11,4 +11,3 @@ git@github.com:sajari/sajari-sdk-go-internal.git sdk-internal
 git@github.com:sajari/synonym.git synonym
 git@github.com:sajari/telem.git telem
 git@github.com:sajari/vectorize.git vectorize
-/Users/benhinchley/Workspace/src/github.com/benhinchley/git-utils/merger/sajari.com sajari.com

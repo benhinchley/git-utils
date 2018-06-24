@@ -4,13 +4,32 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 )
 
-func ListBranches(path string) ([]string, error) {
+func CreateRepo(name, wd string) (*git.Repository, error) {
+	if err := os.Mkdir(name, 0777); err != nil {
+		return nil, fmt.Errorf("could not mkdir %q: %v", name, err)
+	}
+	repo, err := git.PlainInit(name, false)
+	if err != nil {
+		return nil, fmt.Errorf("could not init repo %q: %v", name, err)
+	}
+
+	cmd := exec.Command("git", "commit", "-m", fmt.Sprintf("Root commit for %s", name), "--allow-empty")
+	cmd.Dir = filepath.Join(wd, name)
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("could not create inital commit: %v", err)
+	}
+
+	return repo, nil
+}
+
+func ListRemoteBranches(path string) ([]string, error) {
 	cmd := exec.Command("git", "branch", "-r")
 	cmd.Dir = path
 	buf, err := cmd.Output()
@@ -23,6 +42,31 @@ func ListBranches(path string) ([]string, error) {
 		branch = strings.TrimSpace(branch)
 		branch = strings.Replace(branch, "origin/", "", -1)
 		if strings.HasPrefix(branch, "HEAD") || branch == "" {
+			continue
+		}
+		branches = append(branches, branch)
+	}
+
+	return branches, nil
+}
+
+func ListBranches(path string) ([]string, error) {
+	cmd := exec.Command("git", "branch", "-v")
+	cmd.Dir = path
+	buf, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed running \"git branch -v\"")
+	}
+
+	branches := make([]string, 0, 5)
+	for _, branch := range strings.Split(string(buf), "\n") {
+		parts := strings.Fields(branch)
+		if len(parts) == 0 {
+			continue
+		}
+		branch = parts[0]
+		branch = strings.TrimSpace(branch)
+		if strings.Contains(branch, "HEAD") || branch == "" || branch == "*" {
 			continue
 		}
 		branches = append(branches, branch)

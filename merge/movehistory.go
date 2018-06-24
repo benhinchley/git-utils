@@ -24,7 +24,7 @@ func moveWorker(wd string, work []string) (*mergeItem, error) {
 		return nil, err
 	}
 
-	branches, err := g.ListBranches(repoPath)
+	branches, err := g.ListRemoteBranches(repoPath)
 	if err != nil {
 		return nil, err
 	}
