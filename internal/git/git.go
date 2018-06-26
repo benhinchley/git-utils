@@ -113,3 +113,16 @@ func createSSHKeyAuth() (*ssh.PublicKeys, error) {
 	}
 	return keys, nil
 }
+
+func CurrentBranch(path string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd.Dir = path
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to run \"git rev-parse --abbrev-ref HEAD\"")
+	}
+	buf, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
